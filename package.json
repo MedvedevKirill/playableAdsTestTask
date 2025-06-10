@@ -120,6 +120,7 @@
     "glob-to-regexp": "^0.4.1",
     "gopd": "^1.2.0",
     "graceful-fs": "^4.2.11",
+    "gsap": "^3.13.0",
     "handle-thing": "^2.0.1",
     "has-flag": "^4.0.0",
     "has-symbols": "^1.1.0",
