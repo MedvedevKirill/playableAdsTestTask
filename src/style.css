@@ -2,7 +2,6 @@ html,
 body {
   margin: 0;
   padding: 0;
-  height: 100vh;
 }
 
 #game-root {
@@ -11,4 +10,83 @@ body {
 
 canvas {
   display: block;
+}
+
+#final-dialog {
+  min-width: 100vw;
+  min-height: 100vh;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: none;
+  animation: appear 1s;
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    animation: backdropAppear 1s;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    scale: 0;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes backdropAppear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaling {
+  0% {
+    scale: 1;
+  }
+  50% {
+    scale: 0.9;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5%;
+  height: 100vh;
+}
+
+.dialog-content a {
+  max-width: 70%;
+  max-height: 20%;
+  outline: none;
+  transition: all 0.6s ease;
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+#button-play-now-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#final-logo {
+  max-height: 40%;
+  object-fit: contain;
+  display: block;
+  width: 60%;
+  animation: 5s scaling 1s ease-in-out infinite;
 }

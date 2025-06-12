@@ -4,8 +4,13 @@ import yellowCarImage from './assets/images/yellow.png';
 import greenCarImage from './assets/images/green.png';
 import blueCarImage from './assets/images/blue.png';
 import handImage from './assets/images/hand.png';
+import failImage from './assets/images/fail3.png';
+import playNowButtonImage from './assets/images/button_green.png';
+import logoImage from './assets/images/gamelogo.png';
+
 import gsap from 'gsap';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
+import { PixiPlugin } from 'gsap/PixiPlugin';
 import {
   Application,
   Assets,
@@ -22,7 +27,22 @@ import {
   Bounds,
 } from 'pixi.js';
 
-gsap.registerPlugin(MotionPathPlugin);
+gsap.registerPlugin(MotionPathPlugin, PixiPlugin);
+PixiPlugin.registerPIXI({
+  Application,
+  Assets,
+  Graphics,
+  Sprite,
+  TextStyle,
+  Text,
+  Rectangle,
+  FederatedPointerEvent,
+  RenderTexture,
+  Point,
+  Texture,
+  Container,
+  Bounds,
+});
 
 const LOGICAL_WIDTH = 800;
 const LOGICAL_HEIGHT = 700;
@@ -30,7 +50,8 @@ const RED_CAR_COLOR = '#d1191f';
 const YELLOW_CAR_COLOR = '#ffc841';
 const TRAIL_WIDTH = 40;
 const CAR_ANIMATION_SPEED = 100;
-
+const FAIL_HIDE_DELAY = 1.25;
+const INACTIVITY_WAIT_TIME = 20000;
 type Car = {
   isPathPainted: boolean;
   sprite: Sprite;
@@ -43,6 +64,7 @@ let appState: {
   parkingSpots: Rectangle[];
   redCar: Car;
   yellowCar: Car;
+  timeout?: ReturnType<typeof setTimeout>;
   activeDrawing?: {
     car: Car;
     brush: Graphics;
@@ -107,13 +129,11 @@ const app = new Application();
   const parkingSpots = initParking(inactiveCars, backgroundLayer);
   initCars(activeCars, activeLayer);
 
-  const redParking = parkingSpots[1];
-  const yellowParking = parkingSpots[0];
   const hand = await initHand(
     activeCars[0].sprite.x,
     activeCars[0].sprite.y - 50,
-    redParking.x + redParking.width / 2,
-    redParking.y + redParking.height / 2,
+    parkingSpots[1].x + parkingSpots[1].width / 2,
+    parkingSpots[1].y + parkingSpots[1].height / 2,
     activeLayer,
   );
 
@@ -126,9 +146,8 @@ const app = new Application();
   app.stage.eventMode = 'static';
   app.stage.hitArea = new Rectangle(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
-  app.ticker.add((time) => {
-    //appState.redCar.sprite.rotation += 0.1 * time.deltaTime;
-  });
+  restartTimeout();
+
   window.addEventListener('resize', () => {
     scale = Math.min(
       app.screen.width / LOGICAL_WIDTH,
@@ -139,6 +158,16 @@ const app = new Application();
     app.stage.y = (app.screen.height - LOGICAL_HEIGHT * scale) / 2;
   });
 })();
+
+function restartTimeout() {
+  if (appState.timeout) {
+    clearTimeout(appState.timeout);
+  }
+  appState.timeout = setTimeout(() => {
+    hideHand();
+    showFinalScene();
+  }, INACTIVITY_WAIT_TIME);
+}
 
 function initCars(activeCars: Car[], layer: Container): void {
   const carWidth = Math.max(
@@ -169,6 +198,7 @@ function initCars(activeCars: Car[], layer: Container): void {
 }
 
 function onCarClick(event: FederatedPointerEvent, car: Car): void {
+  restartTimeout();
   if (car.isPathPainted) return;
 
   hideHand();
@@ -313,7 +343,49 @@ function hideHand(): void {
   });
 }
 
+async function startFailView(layer: Container): Promise<Sprite> {
+  const texture = await Assets.load(failImage);
+  const sprite = new Sprite(texture);
+  sprite.anchor.set(0.5);
+  sprite.scale.set(0);
+  sprite.alpha = 0;
+  sprite.eventMode = 'none';
+  sprite.x = LOGICAL_WIDTH / 2;
+  sprite.y = LOGICAL_HEIGHT / 2;
+
+  layer.addChild(sprite);
+
+  gsap.to(sprite, {
+    duration: 1.2,
+    alpha: 1,
+    pixi: {
+      scale: 0.25,
+    },
+    ease: 'power2.out',
+    onComplete: () => hideFailView(layer, sprite, FAIL_HIDE_DELAY),
+  });
+  return sprite;
+}
+
+function hideFailView(layer: Container, sprite: Sprite, delay: number): void {
+  gsap.to(sprite, {
+    duration: 1,
+    delay,
+    alpha: 0,
+    pixi: {
+      scale: 0,
+    },
+    ease: 'power2.out',
+    onComplete: () => {
+      layer.removeChild(sprite);
+      sprite.destroy();
+      showFinalScene();
+    },
+  });
+}
+
 function onDraw(event: PointerEvent): void {
+  restartTimeout();
   if (!appState.activeDrawing) return;
 
   const rect = app.canvas.getBoundingClientRect();
@@ -348,23 +420,27 @@ function onDraw(event: PointerEvent): void {
 }
 
 function endDraw(): void {
+  restartTimeout();
   if (!appState.activeDrawing) return;
   window.removeEventListener('pointermove', onDraw);
   window.removeEventListener('pointerup', endDraw);
   window.removeEventListener('pointerupoutside', endDraw);
   const lastPoint = appState.activeDrawing.path.at(-1);
-  const isCorrect =
+  const isCorrectParking =
     lastPoint &&
     appState.parkingSpots[
       Number(appState.activeDrawing.car.color === RED_CAR_COLOR)
     ].contains(lastPoint.x, lastPoint.y);
 
-  if (isCorrect) {
+  if (isCorrectParking) {
     appState.activeDrawing.car.sprite.eventMode = 'none';
     appState.activeDrawing.car.isPathPainted = true;
     appState.activeDrawing.car.path = appState.activeDrawing.path;
     if (appState.redCar.isPathPainted && appState.yellowCar.isPathPainted) {
-      animateCarsToCollision(() => console.log('BAM!'));
+      clearTimeout(appState.timeout);
+      animateCarsToCollision(() => {
+        startFailView(app.stage);
+      });
     }
   } else {
     clearTrail(appState.activeDrawing.car.trailRenderTexture);
@@ -392,7 +468,7 @@ function checkCarIntersect(carA: Car, carB: Car): boolean {
   const posB = carB.sprite.position;
 
   const distance = Math.hypot(posB.x - posA.x, posB.y - posA.y);
-  const minDistance = (1.5 * (carA.sprite.width + carB.sprite.width)) / 2;
+  const minDistance = (1.25 * (carA.sprite.width + carB.sprite.width)) / 2;
   return distance <= minDistance;
 }
 
@@ -485,7 +561,6 @@ function animateCarAlongPath(
   duration = 2,
   onComplete?: () => void,
 ): void {
-  let killThem = false;
   gsap.to(car.sprite, {
     motionPath: {
       path: car.path.filter(
@@ -498,16 +573,15 @@ function animateCarAlongPath(
     duration,
     ease: 'none',
     onComplete,
-    onUpdate: (): void => {
-      if (killThem) {
-        gsap.killTweensOf(appState.redCar.sprite);
-        gsap.killTweensOf(appState.yellowCar.sprite);
-        return;
-      }
-      if (checkCarIntersect(appState.redCar, appState.yellowCar)) {
-        killThem = true;
-      }
-    },
+    onUpdate: onComplete
+      ? (): void => {
+          if (checkCarIntersect(appState.redCar, appState.yellowCar)) {
+            gsap.killTweensOf(appState.redCar.sprite);
+            gsap.killTweensOf(appState.yellowCar.sprite);
+            onComplete();
+          }
+        }
+      : undefined,
   });
 }
 
@@ -539,4 +613,15 @@ function getPathLength(path: Point[]): number {
     dist += Math.hypot(b.x - a.x, b.y - a.y);
   }
   return dist;
+}
+
+function showFinalScene(): void {
+  const dialog = document.getElementById('final-dialog') as HTMLDialogElement;
+  const buttonImage = document.getElementById(
+    'button-play-now-logo',
+  ) as HTMLImageElement;
+  buttonImage.src = playNowButtonImage;
+  const gameLogo = document.getElementById('final-logo') as HTMLImageElement;
+  gameLogo.src = logoImage;
+  dialog.showModal();
 }
