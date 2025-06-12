@@ -103,6 +103,12 @@ const app = new Application();
     return sprite;
   });
 
+  const backgroundLayer = new Container();
+  app.stage.addChild(backgroundLayer);
+
+  const activeLayer = new Container();
+  app.stage.addChild(activeLayer);
+
   const activeCars: Car[] = [redCarTexture, yellowCarTexture].map((texture) => {
     const sprite = new Sprite(texture);
     sprite.anchor.set(0.5);
@@ -111,7 +117,7 @@ const app = new Application();
       width: LOGICAL_WIDTH,
       height: LOGICAL_HEIGHT,
     });
-    app.stage.addChild(new Sprite(trailRenderTexture));
+    activeLayer.addChild(new Sprite(trailRenderTexture));
     return {
       sprite,
       color: texture === redCarTexture ? RED_CAR_COLOR : YELLOW_CAR_COLOR,
@@ -120,11 +126,6 @@ const app = new Application();
       path: new Array<Point>(),
     };
   });
-  const backgroundLayer = new Container();
-  app.stage.addChild(backgroundLayer);
-
-  const activeLayer = new Container();
-  app.stage.addChild(activeLayer);
 
   const parkingSpots = initParking(inactiveCars, backgroundLayer);
   initCars(activeCars, activeLayer);
@@ -561,10 +562,11 @@ function animateCarAlongPath(
   duration = 2,
   onComplete?: () => void,
 ): void {
+  const step = car.path.length >= 1000 ? 100 : 50;
   gsap.to(car.sprite, {
     motionPath: {
       path: car.path.filter(
-        (_, i) => i % 100 === 0 || i === car.path.length - 1,
+        (_, i) => i % step === 0 || i === car.path.length - 1,
       ),
       autoRotate: Math.PI / 2,
       curviness: 1,
