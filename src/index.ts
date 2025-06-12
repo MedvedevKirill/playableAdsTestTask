@@ -77,7 +77,11 @@ let appState: {
 const app = new Application();
 
 (async () => {
-  await app.init({ background: '#545454', resizeTo: window });
+  await app.init({
+    background: '#545454',
+    resizeTo: window,
+    resolution: window.devicePixelRatio,
+  });
 
   const rootElement = document.getElementById('game-root');
   if (!rootElement) throw new Error('game-root not found');
@@ -150,6 +154,7 @@ const app = new Application();
   restartTimeout();
 
   window.addEventListener('resize', () => {
+    app.renderer.resize(window.innerWidth, window.innerHeight);
     scale = Math.min(
       app.screen.width / LOGICAL_WIDTH,
       app.screen.height / LOGICAL_HEIGHT,
