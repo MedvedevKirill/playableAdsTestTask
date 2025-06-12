@@ -557,12 +557,20 @@ function getSegmentsIntersection(
   return null;
 }
 
+function calculatePathStep(length: number): number {
+  if (length < 25) return 1;
+  if (length < 50) return 5;
+  if (length < 100) return 10;
+  if (length < 1000) return 50;
+  return 100;
+}
+
 function animateCarAlongPath(
   car: Car,
   duration = 2,
   onComplete?: () => void,
 ): void {
-  const step = car.path.length >= 1000 ? 100 : 50;
+  const step = calculatePathStep(car.path.length);
   gsap.to(car.sprite, {
     motionPath: {
       path: car.path.filter(
