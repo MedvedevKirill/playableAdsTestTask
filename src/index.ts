@@ -633,5 +633,6 @@ function showFinalScene(): void {
   buttonImage.src = playNowButtonImage;
   const gameLogo = document.getElementById('final-logo') as HTMLImageElement;
   gameLogo.src = logoImage;
+
   dialog.showModal();
 }
