@@ -29,7 +29,7 @@ export const CAR_INTERSECT_WITH_MULTI = 1.2;
 export const ACTIVE_CARS_SPRITES = [redCarTexture, yellowCarTexture].map(
   (texture) => new Sprite(texture),
 );
-export const INACTIVE_CARS_SPRITES = [greenCarTexture, blueCarTexture].map(
+export const INACTIVE_CARS_SPRITES = [blueCarTexture, greenCarTexture].map(
   (texture) => new Sprite(texture),
 );
 export const HINT_HAND_SPRITE = new Sprite(handTexture);
